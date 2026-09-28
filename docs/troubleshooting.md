@@ -1,10 +1,47 @@
 # Troubleshooting
 
+## The phone keeps spinning
+
+The Share Sheet Shortcut connects the network, logs into SSH, and **queues** one URL. It does not wait for downloading, conversion, Music import, or phone syncing. Those happen later. If a queue-confirmation result is already visible, dismiss that result to finish the Shortcut.
+
+Check the Mac in Terminal:
+
+```sh
+"$HOME/.local/bin/share-to-music" status
+```
+
+| Mac status | Meaning |
+| --- | --- |
+| No jobs yet | No link has reached this user's queue; investigate the phone actions or SSH |
+| `queued` | Saved on Mac, waiting for the worker (normally up to 15 seconds when idle) |
+| `resolving` | Resolving the link and checking media metadata |
+| `downloading` | Downloading **or converting** audio; this version groups both under this state |
+| `importing` | Asking Music to add the converted file |
+| `complete` | Music confirmed the Mac import; phone/cloud sync has its own timing |
+| `failed` | Read the error with `status JOB_ID`; correct the cause, then retry |
+
+This reports stages, not a percentage. For an active job, `status JOB_ID` also shows its log path. If older jobs exist, look for a new job ID or use `status --json` to inspect timestamps instead of assuming an old entry is the current share.
+
+On the iPhone, inspect which action is highlighted: **Connect**, **Use Exit Node**, or **Run Script Over SSH**. Finish any VPN permission or SSH host-key prompt. A server fingerprint prompt proves the server was reached, not that the phone's key was accepted. Compare the phone's public-key fingerprint using the [SSH guide](ssh.md).
+
+### Test SSH without downloading
+
+Duplicate the Shortcut and name the copy **Check Share to Music**. Remove **Get URLs**, **First Item**, and **Base64 Encode**; turn off **Show in Share Sheet** for the copy. Keep the two Tailscale actions, SSH settings, and Show Result. Replace only the copy's SSH script with:
+
+```sh
+/usr/bin/printf 'SSH connected as: '
+/usr/bin/whoami
+"$HOME/.local/bin/share-to-music" doctor
+"$HOME/.local/bin/share-to-music" status
+```
+
+Run the copy directly on the iPhone with no shared input. It should show the login name, helper checks, and recent queue stages. It does not download/import anything or check Music's separate Automation permission. If this test also stalls, URL extraction and media processing are not the cause. If it succeeds, retry the original through **Share → Share to Music** with a real supported URL and note any error.
+
 ## The Shortcut cannot connect
 
-Check Tailscale first: both devices must be connected to the same tailnet and the selected home exit node must be online. Confirm the Mac is awake, Remote Login is enabled for the right user, and Host is the Mac's Tailscale IP/full MagicDNS name. “Permission denied” usually means the username/key/password is wrong; “connection refused” usually means SSH is not listening; a timeout usually means network reachability, access policy, or sleep.
+Check the selected home exit node, then the route to the **Host** you chose. For LAN addressing, verify home Wi-Fi or your approved home subnet route. For direct Tailscale addressing, verify the Mac is connected to the tailnet. In both cases, the Mac needs Remote Login enabled for the correct user and TCP 22 reachable. [Network choices](tailscale.md#choose-the-right-ssh-address)
 
-The Shortcut connects to Tailscale and uses the selected exit node before SSH. Do not expect a `.local` hostname to work over cellular. See the [Tailscale guide](tailscale.md) for exit-node setup and routing details. You do not need public router port forwarding for this project.
+“Permission denied” normally points to authentication or allowed-user settings; “connection refused” points to SSH not listening; a timeout points to routing, name resolution, access policy, or sleep. A `.local` name working on home Wi-Fi does not prove it resolves over cellular. Test both environments. No public router port forwarding is needed.
 
 ## “Scripting actions are disabled”
 

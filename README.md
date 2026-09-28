@@ -28,12 +28,12 @@ Version 0.1 supports one track per share, finished uploads up to two hours, and 
 | --- | --- |
 | A Mac with Music and a logged-in desktop session | The background worker imports into that user's library |
 | An iPhone with Shortcuts | The Share Sheet sends the link |
-| Tailscale on iPhone and Mac, plus an approved exit node on the Mac's home network | The Shortcut establishes the requested network connection before SSH |
+| Tailscale on iPhone and a home exit node, plus a route to the Mac | Use the Mac's home-LAN address, or install Tailscale on the Mac for direct access |
 | Python 3.10+, yt-dlp, ffmpeg/ffprobe, and Deno | Downloading and conversion; Deno supports YouTube extraction |
-| SSH access from iPhone to the Mac's Tailscale address | Remote Login plus a tailnet policy that permits the connection |
+| Remote Login enabled on the Mac and the iPhone's SSH public key authorized | Allows the phone to submit a job as your Mac user |
 | Sync Library or Finder syncing | Transfers the imported library entry to the phone |
 
-The Mac must be awake, online, and logged in to process jobs. This is a macOS tool; Windows and Linux workers are not supported. Initial validation used macOS 26.5.1; other macOS/iOS versions may label settings differently.
+The Mac must be online and awake to process jobs, with your desktop user logged in. Its screen can be off or locked; Terminal does not need to stay open. Remote Login does not keep a Mac powered on or create a desktop session. See [sleep and wake guidance](docs/ssh.md#screen-off-locked-asleep-or-logged-out). This is a macOS tool; Windows and Linux workers are not supported. Initial validation used macOS 26.5.1; other macOS/iOS versions may label settings differently.
 
 ## 1. Install the Mac helper
 
@@ -51,20 +51,20 @@ Open Music and finish any first-run prompts. If macOS asks to allow Music automa
 
 `doctor --music` checks Music access from the current Terminal context. The background worker may need its own Automation permission; verify your first real import before relying on unattended use. The installer does not enable SSH, change Music settings, or alter your SSH keys.
 
-## 2. Set up Tailscale and SSH
+## 2. Enable Remote Login and set up the network
 
-Install [Tailscale](https://tailscale.com/download) on both devices and sign into the same tailnet. Configure and approve an exit node on the Mac's home network; the Mac itself can be that node. Select it in the Shortcut's **Use Exit Node** action. See the [Tailscale setup guide](docs/tailscale.md).
+**Remote Login is required.** On the Mac, open **System Settings → General → Sharing**, turn on **Remote Login**, then click its **ⓘ** button. Choose **Only these users** and add the account that owns your Music library. Screen Sharing, Remote Management, and Remote Application Scripting are not needed. [Step-by-step SSH setup](docs/ssh.md#1-turn-on-remote-login)
 
-In **System Settings → General → Sharing → Remote Login**, enable Remote Login and allow your Mac user. Use the Mac's **Tailscale IP or full MagicDNS name** as the SSH host, and find your short username with `whoami` in Terminal. [Apple's Remote Login guide](https://support.apple.com/guide/mac-help/mchlp1066/mac)
+Install/sign into [Tailscale](https://tailscale.com/download) on the iPhone and configure an approved exit node on your Mac's home network. Select it in the Shortcut. For **Host**, use either the Mac's reachable **home-LAN address** (with an approved home subnet route when away), or its **Tailscale address** if Tailscale runs directly on the Mac. A working `.local` name is suitable on home Wi-Fi; test separately on cellular. [Choose your network setup](docs/tailscale.md#choose-the-right-ssh-address)
 
-Selecting an exit node does not make a remote `.local` hostname resolve. Tailnet addressing keeps this connection independent of local-network discovery. No public router port forwarding is needed. See the [SSH key setup](docs/setup.md#authorize-the-shortcuts-ssh-key) for password-free use.
+Find your short Mac username with `whoami` in Terminal. Authorize the **iPhone's public SSH key**, then test it before turning off password login. Selecting “SSH Key” in the Shortcut does not disable password access to the Mac's SSH server. The [key-only SSH guide](docs/ssh.md#5-disable-password-login-and-require-a-public-key) includes server settings, verification, and recovery steps. No public router port forwarding is needed.
 
 ## 3. Add the iPhone Shortcut
 
 1. Download [Share to Music.shortcut](https://github.com/aklarby/share-to-music/raw/refs/heads/main/shortcuts/Share%20to%20Music.shortcut) on your iPhone. If Safari saves it, open it from **Files → Downloads**, then tap **Add Shortcut**.
 2. Select your home-network node in **Use Exit Node**. Leave **Connect to your Tailscale network** as the first action. Install/open Tailscale first if these actions are unavailable.
-3. In **Run Script Over SSH**, replace `your-mac.your-tailnet.ts.net` and `your-mac-username` with your Mac's Tailscale address and login. Port is normally `22`.
-4. Choose **SSH Key** authentication and add its public key to your Mac's `authorized_keys` as described in the [walkthrough](docs/setup.md). The distributed file contains no password or private key.
+3. In **Run Script Over SSH**, replace `your-mac.your-tailnet.ts.net` and `your-mac-username` with your chosen Mac LAN/Tailscale address and short login name. Port is normally `22`.
+4. Choose **SSH Key** authentication and add its public key to your Mac's `authorized_keys` as described in the [SSH key walkthrough](docs/ssh.md#3-authorize-the-iphones-public-key). The distributed file contains no password or private key.
 5. In Shortcut Details, confirm **Show in Share Sheet** is enabled. The Shortcut accepts URLs, text, and Safari webpages and uses the first URL it finds.
 6. If scripting actions are disabled, turn on **Allow Running Scripts** in Shortcuts' advanced settings on the device running the Shortcut. [Apple's scripting settings guide](https://support.apple.com/guide/shortcuts/apdfeb05586f/ios)
 
@@ -97,6 +97,8 @@ Check progress on the Mac:
 "$HOME/.local/bin/share-to-music" status YOUR_JOB_ID
 "$HOME/.local/bin/share-to-music" retry YOUR_JOB_ID
 ```
+
+**The phone’s spinner is not download or sync progress.** The Shortcut ends after showing the queue confirmation; a visible result may need to be dismissed. If it keeps spinning and `status` says “No jobs yet,” the link has not reached this queue. Check the highlighted Tailscale/SSH action and any trust/permission prompts. [Progress and connection troubleshooting](docs/troubleshooting.md#the-phone-keeps-spinning)
 
 `complete` means **Music on the Mac confirmed the import**. It does not mean the phone has synced. `failed` includes an error and the job log location. Retries are explicit so a broken source does not loop indefinitely.
 

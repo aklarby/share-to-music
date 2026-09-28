@@ -1,38 +1,19 @@
 # Setup walkthrough
 
-Follow the [README](../README.md) for installation and the [Tailscale guide](tailscale.md) to connect both devices and approve your home exit node. This guide covers pairing the iPhone and Mac over SSH.
+Follow the [README](../README.md) to install the Mac helper. Then use these guides in order:
+
+1. [Choose the Mac's reachable address and home exit node](tailscale.md#choose-the-right-ssh-address).
+2. [Turn on Remote Login for your Mac user](ssh.md#1-turn-on-remote-login).
+3. [Find the short login name and authorize the iPhone's public key](ssh.md#3-authorize-the-iphones-public-key).
+4. Test a share; then [require public-key authentication on the SSH server](ssh.md#5-disable-password-login-and-require-a-public-key).
 
 ## Find your Mac's connection details
 
-In Mac Terminal:
-
-```sh
-whoami
-scutil --get LocalHostName
-```
-
-Use `whoami`'s output (for example, `alex`) for **User**. For **Host**, copy the Mac's Tailscale IP or full MagicDNS name from Tailscale's device list. The local hostname command helps identify the Mac, but do not use its `.local` name when connecting remotely. The placeholder `your-mac.your-tailnet.ts.net` must be replaced with the actual name of your Mac.
-
-Enable **System Settings → General → Sharing → Remote Login**, restricted to the user whose Music library you want to import into. A different SSH login has a different home directory, queue, LaunchAgent, and Music library. Keep the Mac logged into that user's desktop.
+Use `whoami` in Mac Terminal for **User**. For **Host**, use the Mac's home-LAN IP or a working local hostname when your phone can reach that network. A direct Tailscale IP/full MagicDNS name is another option if Tailscale is installed on the Mac. Replace the template's example address; use port `22`. A home-Wi-Fi test and an away-from-home test establish different network paths.
 
 ## Authorize the Shortcuts SSH key
 
-1. On the iPhone, open **Share to Music → Run Script Over SSH → Authentication** and select **SSH Key**.
-2. Use the action's SSH Key controls to generate a key if necessary, then copy/share its **public key** to the Mac. Keep the private key on your device.
-3. On the Mac, create the SSH configuration directory and open the authorized key list:
-
-   ```sh
-   mkdir -p "$HOME/.ssh"
-   chmod 700 "$HOME/.ssh"
-   touch "$HOME/.ssh/authorized_keys"
-   chmod 600 "$HOME/.ssh/authorized_keys"
-   nano "$HOME/.ssh/authorized_keys"
-   ```
-
-4. Append the public key as one complete line. Preserve existing keys. In nano, save with **Control-O**, press **Return**, then exit with **Control-X**.
-5. Set **Host**, **Port**, and **User** in the Shortcut. On its first connection, verify that the host is your Mac before accepting its host-key prompt.
-
-If you prefer password authentication, choose **Password** and enter the Mac account password on your own device. Do not distribute a Shortcut with a saved password. Key authentication is the recommended setup for repeated use.
+The [SSH guide](ssh.md) walks through copying the key from the **iPhone**, preserving existing authorized keys, comparing fingerprints, checking the Mac's host identity, and safely disabling password login. A server-fingerprint prompt confirms you reached SSH; successful key authentication is a separate step.
 
 The Mac's SSH server authenticates this connection as your user. The Shortcut always runs a fixed queue command with the URL as Base64 data:
 
@@ -53,10 +34,10 @@ If downloading the signed file is inconvenient, create a Shortcut named **Share 
 | 3 | Get URLs from Input | Input = **Shortcut Input** explicitly, not the preceding Tailscale action's output |
 | 4 | Get Item from List | **First Item** from **URLs** |
 | 5 | Base64 Encode | **Encode** the previous item; Line Breaks = **None** |
-| 6 | Run Script Over SSH | Mac Tailscale host/user/key; command above with **Base64 Encoded** inserted between single quotes |
+| 6 | Run Script Over SSH | Reachable Mac LAN/Tailscale host, short username, and phone key; command above with **Base64 Encoded** inserted between single quotes |
 | 7 | Show Result / Show Content | **Shell Script Result** from the SSH action |
 
-In the Shortcut's details, enable **Show in Share Sheet**, accepting URLs, text, and Safari webpages. On the device running it, allow scripting in Shortcuts' advanced settings. If running from the app without shared input, supply a URL first; the normal workflow starts from another app's Share Sheet.
+In the Shortcut's details, enable **Show in Share Sheet**, accepting URLs, text, and Safari webpages. On the device running it, allow scripting in Shortcuts' advanced settings. Tapping Run in the editor supplies no track by itself. If running from the app without shared input, supply a URL first; the normal workflow starts from another app's Share Sheet.
 
 ## First-run check
 

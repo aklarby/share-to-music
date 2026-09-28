@@ -46,7 +46,7 @@ def build():
                 **({"ShowWhenRun": False} if name == "connect" else {}),
             },
         })
-    action("comment", WFCommentActionText="Setup: install/sign in to Tailscale on iPhone and Mac. Select your home-network exit node above. Set SSH Host to the Mac's Tailscale IP or MagicDNS name and User to its login. Authorize the SSH public key on the Mac and install the helper. Tailscale and the exit node stay enabled afterward. The result confirms queueing, not phone sync.")
+    action("comment", WFCommentActionText="Setup: connect Tailscale on iPhone and select your home exit node. Enable Remote Login on the Mac. Set Host to its reachable LAN or Tailscale address and User to its short login name. Authorize the iPhone's public SSH key and install the helper. Test on cellular separately from home Wi-Fi. Tailscale stays enabled afterward. This only queues the link; it does not wait for audio conversion or phone sync.")
     action("detect.link", UUID=ids["urls"], WFInput=text_token({"Type": "ExtensionInput"}))
     action("getitemfromlist", UUID=ids["first"], WFInput=output("urls", "URLs"), WFItemSpecifier="First Item")
     action("base64encode", UUID=ids["encoded"], WFInput=output("first", "Item from List"),
