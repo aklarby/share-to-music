@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+export PYTHONPATH="$project_dir${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m share_to_music "$@"

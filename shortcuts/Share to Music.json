@@ -1,0 +1,141 @@
+{
+  "WFWorkflowName": "Share to Music",
+  "WFWorkflowClientVersion": "3030.0.4.2",
+  "WFWorkflowMinimumClientVersion": 900,
+  "WFWorkflowMinimumClientVersionString": "900",
+  "WFWorkflowIcon": {
+    "WFWorkflowIconStartColor": 4282601983,
+    "WFWorkflowIconGlyphNumber": 59511
+  },
+  "WFWorkflowTypes": [
+    "ActionExtension"
+  ],
+  "WFWorkflowInputContentItemClasses": [
+    "WFURLContentItem",
+    "WFStringContentItem",
+    "WFSafariWebPageContentItem"
+  ],
+  "WFWorkflowActions": [
+    {
+      "WFWorkflowActionIdentifier": "io.tailscale.ipn.ios.ConnectIntent",
+      "WFWorkflowActionParameters": {
+        "UUID": "60A53415-DB6B-52D3-B9A9-E5A428A28C28",
+        "AppIntentDescriptor": {
+          "TeamIdentifier": "W5364U7YZB",
+          "BundleIdentifier": "io.tailscale.ipn.ios",
+          "Name": "Tailscale",
+          "AppIntentIdentifier": "ConnectIntent"
+        },
+        "ShowWhenRun": false
+      }
+    },
+    {
+      "WFWorkflowActionIdentifier": "io.tailscale.ipn.ios.UseExitNodeIntent",
+      "WFWorkflowActionParameters": {
+        "UUID": "57D94B2F-126D-5EC0-91CB-0EA57FE50879",
+        "AppIntentDescriptor": {
+          "TeamIdentifier": "W5364U7YZB",
+          "BundleIdentifier": "io.tailscale.ipn.ios",
+          "Name": "Tailscale",
+          "AppIntentIdentifier": "UseExitNodeIntent"
+        }
+      }
+    },
+    {
+      "WFWorkflowActionIdentifier": "is.workflow.actions.comment",
+      "WFWorkflowActionParameters": {
+        "WFCommentActionText": "Setup: install/sign in to Tailscale on iPhone and Mac. Select your home-network exit node above. Set SSH Host to the Mac's Tailscale IP or MagicDNS name and User to its login. Authorize the SSH public key on the Mac and install the helper. Tailscale and the exit node stay enabled afterward. The result confirms queueing, not phone sync."
+      }
+    },
+    {
+      "WFWorkflowActionIdentifier": "is.workflow.actions.detect.link",
+      "WFWorkflowActionParameters": {
+        "UUID": "A9983F5F-1F1B-5EB8-9692-06903B29A659",
+        "WFInput": {
+          "Value": {
+            "string": "\ufffc",
+            "attachmentsByRange": {
+              "{0, 1}": {
+                "Type": "ExtensionInput"
+              }
+            }
+          },
+          "WFSerializationType": "WFTextTokenString"
+        }
+      }
+    },
+    {
+      "WFWorkflowActionIdentifier": "is.workflow.actions.getitemfromlist",
+      "WFWorkflowActionParameters": {
+        "UUID": "7B709726-7F02-55BE-82D9-F5ED44C55C58",
+        "WFInput": {
+          "Value": {
+            "Type": "ActionOutput",
+            "OutputUUID": "A9983F5F-1F1B-5EB8-9692-06903B29A659",
+            "OutputName": "URLs"
+          },
+          "WFSerializationType": "WFTextTokenAttachment"
+        },
+        "WFItemSpecifier": "First Item"
+      }
+    },
+    {
+      "WFWorkflowActionIdentifier": "is.workflow.actions.base64encode",
+      "WFWorkflowActionParameters": {
+        "UUID": "A809DB97-A64A-5269-9940-59586C0FC14D",
+        "WFInput": {
+          "Value": {
+            "Type": "ActionOutput",
+            "OutputUUID": "7B709726-7F02-55BE-82D9-F5ED44C55C58",
+            "OutputName": "Item from List"
+          },
+          "WFSerializationType": "WFTextTokenAttachment"
+        },
+        "WFEncodeMode": "Encode",
+        "WFBase64LineBreakMode": "None"
+      }
+    },
+    {
+      "WFWorkflowActionIdentifier": "is.workflow.actions.runsshscript",
+      "WFWorkflowActionParameters": {
+        "UUID": "C11FC99B-D0C5-579B-88B7-0C2AF4959F77",
+        "WFSSHHost": "your-mac.your-tailnet.ts.net",
+        "WFSSHPort": "22",
+        "WFSSHUser": "your-mac-username",
+        "WFSSHAuthenticationType": "SSH Key",
+        "WFSSHScript": {
+          "Value": {
+            "string": "\"$HOME/.local/bin/share-to-music\" enqueue --base64 '\ufffc'",
+            "attachmentsByRange": {
+              "{52, 1}": {
+                "Type": "ActionOutput",
+                "OutputUUID": "A809DB97-A64A-5269-9940-59586C0FC14D",
+                "OutputName": "Base64 Encoded"
+              }
+            }
+          },
+          "WFSerializationType": "WFTextTokenString"
+        }
+      }
+    },
+    {
+      "WFWorkflowActionIdentifier": "is.workflow.actions.showresult",
+      "WFWorkflowActionParameters": {
+        "Text": {
+          "Value": {
+            "string": "\ufffc",
+            "attachmentsByRange": {
+              "{0, 1}": {
+                "Type": "ActionOutput",
+                "OutputUUID": "C11FC99B-D0C5-579B-88B7-0C2AF4959F77",
+                "OutputName": "Shell Script Result"
+              }
+            }
+          },
+          "WFSerializationType": "WFTextTokenString"
+        }
+      }
+    }
+  ],
+  "WFWorkflowImportQuestions": []
+}
