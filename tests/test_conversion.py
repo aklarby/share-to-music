@@ -8,11 +8,80 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from share_to_music import core
+from share_to_music import core, model
 
 
 @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "ffmpeg/ffprobe are not installed")
 class ConversionTests(unittest.TestCase):
+    def enriched_audio(self, root, *, embed_failure=False, model_failure=False):
+        cover = root / "fixture.jpg"
+        subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i",
+                        "color=c=blue:s=64x64", "-frames:v", "1", "-threads", "1", str(cover)], check=True)
+        info = {"extractor_key": "Youtube", "id": "BaW_jenozKc", "title": "Artist - Song (Unreleased).mp3",
+                "uploader": "Fan upload", "duration": 1, "thumbnail": "https://i.ytimg.com/vi/test.jpg"}
+        original = core.run_command
+        before = []
+
+        def packets(path):
+            return json.loads(original(["ffprobe", "-v", "error", "-select_streams", "a", "-show_packets",
+                                        "-show_data_hash", "sha256", "-of", "json", str(path)], timeout=10))["packets"]
+
+        def fake_download(args, **kwargs):
+            if args[0] == "/usr/bin/shortcuts":
+                if model_failure:
+                    raise core.UserError("Model permission denied")
+                output = Path(args[args.index("--output-path") + 1])
+                output.write_text(json.dumps({"title": "Clean Song", "artist": "Real Artist"}))
+                return ""
+            if args[0] == "yt-dlp":
+                staging = root / "staging/testjob"
+                source = staging / "source.wav"
+                subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i",
+                                "sine=frequency=440:duration=1", str(source)], check=True)
+                Path(args[args.index("--print-to-file") + 2]).write_text(json.dumps({**info, "filepath": str(source)}) + "\n")
+                return ""
+            if args[0] == "ffmpeg" and "-disposition:v" in args:
+                if embed_failure:
+                    raise core.UserError("Artwork mux failed")
+            result = original(args, **kwargs)
+            if args[0] == "ffmpeg" and args[-1].endswith(".partial.m4a"):
+                before.extend(packet["data_hash"] for packet in packets(args[-1]))
+            return result
+
+        (root / model.READY_FILE).write_text(json.dumps({"shortcut": model.SHORTCUT, "version": 1}))
+        with (root / "test.log").open("w") as log, \
+                patch("share_to_music.metadata.fetch", return_value=cover.read_bytes()), \
+                patch("share_to_music.core.run_command", side_effect=fake_download):
+            audio = core.download_audio(root, {"id": "testjob"}, info, "unused", log)
+        probe = json.loads(original(["ffprobe", "-v", "error", "-show_format", "-show_streams", "-of", "json", str(audio)], timeout=10))
+        self.assertEqual([packet["data_hash"] for packet in packets(audio)], before)
+        self.assertEqual(probe["format"]["tags"]["comment"], "share-to-music:youtube:BaW_jenozKc")
+        return audio, probe
+
+    def test_real_artwork_and_model_tags_are_embedded_without_reencoding_aac(self):
+        with tempfile.TemporaryDirectory() as temp:
+            _, probe = self.enriched_audio(Path(temp))
+        self.assertEqual(probe["format"]["tags"]["title"], "Clean Song")
+        self.assertEqual(probe["format"]["tags"]["artist"], "Real Artist")
+        self.assertEqual(probe["format"]["tags"]["album"], "Shared Audio")
+        self.assertTrue(any(s.get("disposition", {}).get("attached_pic") == 1 for s in probe["streams"]))
+
+    def test_embedding_failure_preserves_valid_tagged_audio(self):
+        with tempfile.TemporaryDirectory() as temp:
+            _, probe = self.enriched_audio(Path(temp), embed_failure=True)
+        self.assertEqual(probe["format"]["tags"]["title"], "Clean Song")
+        self.assertFalse(any(s.get("disposition", {}).get("attached_pic") == 1 for s in probe["streams"]))
+
+    def test_model_failure_preserves_audio_artwork_and_source_tags(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            audio, probe = self.enriched_audio(root, model_failure=True)
+            self.assertTrue(audio.exists())
+            self.assertFalse(model.ready(root))
+        self.assertEqual(probe["format"]["tags"]["title"], "Artist - Song")
+        self.assertEqual(probe["format"]["tags"]["artist"], "Fan upload")
+        self.assertTrue(any(s.get("disposition", {}).get("attached_pic") == 1 for s in probe["streams"]))
+
     def test_real_aac_conversion_tags_and_cache(self):
         with tempfile.TemporaryDirectory(prefix="audio test '") as temp:
             root = Path(temp)
@@ -32,7 +101,7 @@ class ConversionTests(unittest.TestCase):
                 manifest.write_text(json.dumps({**info, "filepath": str(source)}) + "\n")
                 return ""
 
-            with (root / "test.log").open("w") as log, patch("share_to_music.core.run_command", side_effect=fake_download):
+            with (root / "test.log").open("w") as log, patch("share_to_music.core.find_artwork", return_value=(None, "")), patch("share_to_music.core.run_command", side_effect=fake_download):
                 audio = core.download_audio(root, job, info, "https://www.youtube.com/watch?v=BaW_jenozKc", log)
                 cached = core.download_audio(root, job, info, "unused", log)
             self.assertEqual(audio, cached)

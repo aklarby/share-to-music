@@ -6,6 +6,7 @@ Follow the [README](../README.md) to install the Mac helper. Then use these guid
 2. [Turn on Remote Login for your Mac user](ssh.md#1-turn-on-remote-login).
 3. [Find the short login name and authorize the iPhone's public key](ssh.md#3-authorize-the-iphones-public-key).
 4. Test a share; then [require public-key authentication on the SSH server](ssh.md#5-disable-password-login-and-require-a-public-key).
+5. **Optional:** for clean song names, [install and test the Mac model helper](metadata.md). Artwork lookup is automatic; AI is enabled only after its interactive setup check passes.
 
 ## Find your Mac's connection details
 
