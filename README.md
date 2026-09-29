@@ -16,11 +16,13 @@ Share to Music connects an iPhone Share Sheet Shortcut to a small Python helper 
 - Connects the iPhone to Tailscale and uses your selected home-network exit node before SSH.
 - Runs downloads in a per-user background queue, independent of the SSH connection.
 - Writes 256 kbps AAC with title, artist/uploader, album, and an import identity tag. Source quality still limits the result.
+- Optionally uses a native Mac **Clean Music Tags** Shortcut to name the song and artist with ChatGPT or Apple Intelligence, without an API key.
+- Embeds matching catalog artwork or the source thumbnail; failed enrichment still permits audio import.
 - Avoids repeated imports by normalizing URLs and checking a source marker in Music.
 - Saves progress and logs; a failed Music import can retry using the audio already downloaded.
 - Includes a signed, downloadable `.shortcut`, inspectable source, a generator, and automated tests.
 
-Version 0.1 supports one track per share, finished uploads up to two hours, and output under 190 MB. Playlists, channels, live streams, artwork, and authenticated/DRM-protected downloads are outside this version's scope. Use it for audio you own or are permitted to download.
+Version 0.2 supports one track per share, finished uploads up to two hours, and output under 190 MB. Playlists, channels, live streams, and authenticated/DRM-protected downloads are outside this version's scope. Use it for audio you own or are permitted to download.
 
 ## Before you start
 
@@ -110,6 +112,16 @@ You can also queue a quoted URL directly in Terminal:
 
 Replace the example with a real track you have permission to download.
 
+## Optional: clean song names with a Mac model
+
+On a Mac with Apple Intelligence enabled, install the separate [Clean Music Tags Mac Shortcut](https://github.com/aklarby/share-to-music/raw/refs/heads/main/shortcuts/Clean%20Music%20Tags.shortcut). It uses **Use Model → ChatGPT** by default; no API key is needed. Run this while at your Mac to finish first-run model permissions:
+
+```sh
+"$HOME/.local/bin/share-to-music" setup-ai
+```
+
+Follow the [optional metadata setup guide with screenshots](docs/metadata.md) for model settings, permissions, and fallbacks. The model's title and artist are used directly, with **&** between collaborating artists and clean song names without upload/version labels. There is no confidence score. Model failures fall back to source tags; artwork lookup runs automatically even without AI. All processing happens in the Mac worker, so **your iPhone Shortcut stays unchanged**.
+
 ## Files, privacy, and maintenance
 
 Runtime files live in `~/Library/Application Support/Share to Music/`: `audio/` holds retained M4A files, `queue.sqlite3` holds jobs, `logs/` holds diagnostics, and `staging/` holds incomplete downloads. This directory is private to your user. Do not delete the audio directory unless you have verified Music has its own copies; Music can reference imported files in place. [Apple's import behavior](https://support.apple.com/guide/music/mus3081/mac)
@@ -138,6 +150,7 @@ Delete the Shortcut separately in Shortcuts. Music library entries and downloade
 python3 -m unittest discover -s tests -v
 python3 scripts/build_shortcut.py        # reproducible JSON + unsigned plist
 python3 scripts/build_shortcut.py --sign # macOS: sign distributable for anyone
+python3 scripts/build_metadata_shortcut.py --sign # separate Mac AI helper
 ```
 
 The tests exercise URL validation, queue durability, worker locking, failed-import recovery, installer paths with spaces/quotes, Shortcut variable wiring, and real AAC conversion when ffmpeg is installed. Music calls and network downloads are mocked in the automated suite. See [validation notes](docs/validation.md) for what has and has not been tested on real devices.

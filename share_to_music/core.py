@@ -19,6 +19,9 @@ from urllib.parse import parse_qs, urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 import uuid
 
+from . import model
+from .metadata import choose_tags, find_artwork
+
 
 DATA_DIR = Path.home() / "Library/Application Support/Share to Music"
 SHORT_HOSTS = {"on.soundcloud.com", "soundcloud.app.goo.gl"}
@@ -215,12 +218,13 @@ def download_audio(root: Path, job: sqlite3.Row, info: dict, url: str, log) -> P
     if not source.is_relative_to(staging.resolve()) or not source.is_file():
         raise UserError("Downloader returned an unexpected file path.")
     temporary = output.with_suffix(".partial.m4a")
-    title = str(info.get("track") or info.get("title") or "Shared audio")
-    artist = str(info.get("artist") or info.get("uploader") or "Unknown artist")
+    suggestion = model.suggest(root, info, staging, log, run_command)
+    tags = choose_tags(info, suggestion)
+    log.write(f"Selected tags: {json.dumps(tags, ensure_ascii=False)}\n")
     run_command(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(source),
                  "-map", "0:a:0", "-vn", "-c:a", "aac", "-b:a", "256k", "-movflags", "+faststart",
-                 "-metadata", f"title={title}", "-metadata", f"artist={artist}",
-                 "-metadata", f"album={info.get('album') or 'Shared Audio'}",
+                 "-metadata", f"title={tags['title']}", "-metadata", f"artist={tags['artist']}",
+                 "-metadata", f"album={tags['album']}",
                  "-metadata", f"comment=share-to-music:{key}", str(temporary)],
                 timeout=600, log=log)
     if not temporary.exists() or not 0 < temporary.stat().st_size <= MAX_SIZE:
@@ -231,6 +235,28 @@ def download_audio(root: Path, job: sqlite3.Row, info: dict, url: str, log) -> P
     if not 0 < float(probe["format"]["duration"]) <= MAX_DURATION + 1:
         temporary.unlink(missing_ok=True)
         raise UserError("Converted audio has an invalid duration.")
+    # Keep the valid audio until optional image retrieval AND embedding succeed.
+    try:
+        cover, album = find_artwork(tags, info, staging, log, run_command)
+        if cover:
+            decorated = staging / "with-artwork.m4a"
+            run_command(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                         "-i", str(temporary), "-i", str(cover),
+                         "-map", "0:a:0", "-map", "1:v:0", "-map_metadata", "0",
+                         "-c:a", "copy", "-c:v", "mjpeg", "-disposition:v", "attached_pic",
+                         "-metadata", f"album={album or tags['album']}", "-movflags", "+faststart",
+                         str(decorated)], timeout=30, log=log)
+            check = json.loads(run_command(["ffprobe", "-v", "error", "-show_format", "-show_streams",
+                                            "-of", "json", str(decorated)], timeout=10))
+            streams = check.get("streams", [])
+            if (not any(s.get("disposition", {}).get("attached_pic") == 1 for s in streams)
+                    or not any(s.get("codec_name") == "aac" for s in streams)
+                    or check.get("format", {}).get("tags", {}).get("comment") != f"share-to-music:{key}"
+                    or not 0 < decorated.stat().st_size <= MAX_SIZE):
+                raise ValueError("Artwork output failed validation")
+            decorated.replace(temporary)
+    except Exception as exc:
+        log.write(f"Artwork unavailable ({type(exc).__name__}); importing audio without new artwork.\n")
     temporary.replace(output)
     shutil.rmtree(staging)
     return output
@@ -257,7 +283,7 @@ def process_queue(root: Path) -> int:
                 logs = root / "logs"
                 logs.mkdir(exist_ok=True)
                 update(db, job["id"], state="resolving", attempts=job["attempts"] + 1, error=None)
-                with (logs / f"{job['id']}.log").open("a") as log:
+                with (logs / f"{job['id']}.log").open("a", buffering=1) as log:
                     try:
                         key, audio = job["media_key"], job["audio_path"]
                         if not key or not audio or not Path(audio).is_file():

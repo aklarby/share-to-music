@@ -1,5 +1,26 @@
 # Validation record
 
+## Automatic metadata and artwork (v0.2)
+
+Validated on September 28–29, 2026, macOS 26.6.2, using the native ChatGPT extension and real FFmpeg. The iPhone Shortcut and its command are unchanged.
+
+| Check | Result |
+| --- | --- |
+| Automated suite | 45 tests passed, including real AAC conversion, embedded artwork, unchanged AAC packet hashes after artwork attachment, model failure/source fallback, image/mux failure, generated helper wiring, and existing queue/retry behavior |
+| Native model setup | `setup-ai` passed through `shortcuts run` with a small JSON input file and plain-text JSON output; no API key |
+| User-provided examples | Actual ChatGPT outputs were **Late Nights — Drake & Partynextdoor** and **Think Before — Partynextdoor & Justin Bieber**; recorded as regression fixtures |
+| Native output format | ChatGPT Dictionary output returned a model-service error on this Mac. Text output with a JSON prompt and CLI `--output-type public.plain-text` succeeded and is used in the downloadable helper |
+| Downloadable helper | Signed with Apple's Shortcuts CLI. Decrypted signing envelope confirmed that all three actions and their variable connections match the reviewable source; signing normalizes workflow-level metadata |
+| Live catalog artwork | Apple's catalog matched **Zoo Station — Nine Inch Nails**, including duration, and returned artwork for **(Ǎhk-to͝ong Bāy-Bi) Covered**; the image downloaded and normalized successfully. This check did not download or import the song |
+| Live source artwork and background AI | Installed worker downloaded the provided SoundCloud track, ran the model, and produced AAC with **Think Before**, **Partynextdoor & Justin Bieber**, the import identity marker, and attached JPEG artwork |
+| Queued Music completion and retry | First import attempt returned an AppleEvent timeout. After unlocking the Mac, the installed worker completed the retry using retained audio, without another download/model run. Its exact import marker matched one existing Music entry, so deduplication preserved that entry and its original title rather than creating or retagging it |
+| Native Music verification | Inspected the existing track's Song Info and confirmed its source marker; read back the same persistent ID recorded by the completed queue job, with one matching entry |
+| Setup screenshots | Included the user-supplied native helper screenshot and a native capture of the expanded model settings. Images show no account credentials or personal network configuration |
+
+The newly generated M4A's clean tags and attached artwork were verified with ffprobe. Since this source already existed in Music, the live queue test verified deduplication/recovery, not insertion of a second copy with new tags. A new-source Music insertion with v0.2 and a fresh iPhone sync test remain unverified; the importer itself is unchanged. The previous device-pair checks below apply to v0.1.2.
+
+## Original workflow (v0.1.2)
+
 Initial validation: September 28, 2026, macOS 26.5.1, Python 3.14.7, yt-dlp 2026.08.19, FFmpeg 9.0.1.
 
 | Check | Result |

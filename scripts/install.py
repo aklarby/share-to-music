@@ -76,6 +76,7 @@ def main():
     print(f"Private data: {prefix}")
     print("Worker checks the queue every 15 seconds while you are logged in and the Mac is awake.")
     print('Next: "$HOME/.local/bin/share-to-music" doctor --music')
+    print('For optional AI: import Clean Music Tags.shortcut on this Mac, then run "$HOME/.local/bin/share-to-music" setup-ai')
 
 
 if __name__ == "__main__":

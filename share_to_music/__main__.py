@@ -9,8 +9,8 @@ import shutil
 import subprocess
 import sys
 
-from . import __version__
-from .core import DATA_DIR, MAX_INPUT, UserError, connect, decode_url, enqueue, process_queue, retry
+from . import __version__, model
+from .core import DATA_DIR, MAX_INPUT, UserError, connect, decode_url, enqueue, process_queue, retry, run_command
 
 
 def main(argv=None) -> int:
@@ -30,10 +30,24 @@ def main(argv=None) -> int:
     again = sub.add_parser("retry", help="Retry a failed job; reuse converted audio when available")
     again.add_argument("job_id")
     sub.add_parser("worker", help="Process queued jobs (normally run by launchd)")
+    setup = sub.add_parser("setup-ai", help="Interactively test Clean Music Tags and enable optional worker AI")
+    setup.add_argument("--disable", action="store_true", help="Use source tags without invoking a model")
     doctor = sub.add_parser("doctor", help="Check dependencies and background worker")
     doctor.add_argument("--music", action="store_true", help="Ask Music for its version; may request Automation permission")
     args = parser.parse_args(argv)
     try:
+        if args.command == "setup-ai":
+            if args.disable:
+                model.disable(args.data_dir)
+                print("AI disabled. New jobs will use source tags; artwork lookup remains enabled.")
+                return 0
+            print("Testing Clean Music Tags with example metadata. Complete any Shortcuts/model permission prompts now.", flush=True)
+            try:
+                model.setup(args.data_dir, sys.stdout, run_command)
+            except Exception as exc:
+                raise UserError(f"AI setup failed: {exc}. Source-tag fallback remains enabled.") from exc
+            print("OK Clean Music Tags. AI enabled for new audio; each model call has a 45-second limit.")
+            return 0
         if args.command == "doctor":
             ok = sys.platform == "darwin"
             print(f"{'OK' if ok else 'MISSING'} macOS")
@@ -46,6 +60,7 @@ def main(argv=None) -> int:
             loaded = service is not None and service.returncode == 0
             print(f"{'OK' if loaded else 'MISSING'} background worker: {'loaded' if loaded else 'run python3 scripts/install.py'}")
             ok = ok and loaded
+            print("AI: " + ("enabled (setup passed)" if model.ready(args.data_dir) else "source-tag fallback; run setup-ai to enable"))
             if args.music and sys.platform == "darwin":
                 result = subprocess.run(["/usr/bin/osascript", "-e", 'tell application "Music" to get version'],
                                         text=True, capture_output=True, timeout=30)
