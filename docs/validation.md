@@ -1,5 +1,13 @@
 # Validation record
 
+## SoundCloud album grouping and direct artwork (v0.2.1)
+
+- Removed catalog lookup in favor of each upload's own artwork, as requested for a library of mostly unreleased tracks.
+- 47 tests passed, including real FFmpeg checks that source artwork and enrichment failures retain `album=SoundCloud`, `album_artist=Various Artists`, and the compilation flag, with unchanged AAC packet hashes. Tests also verify direct source-image retrieval, alternate thumbnail sizes, bounded failures, and no network lookup when source artwork is missing.
+- Applied the tested model names to the two user-identified existing Music entries in place, then set their shared SoundCloud album, Various Artists album artist, and compilation flag. Confirmed both clean titles and their individual artists together in the native Music album view. Persistent track IDs and artwork were preserved; original metadata was backed up privately.
+- Updated the retained test M4A's album grouping without re-encoding, verified all AAC packets were unchanged, and preserved its title, artist, import marker, and artwork. Kept a private backup outside the repository.
+- Retrieved artwork for both example tracks directly from SoundCloud's image CDN using the final implementation. Added the missing source cover to the existing **Late Nights** entry; both tracks now have artwork without a catalog lookup.
+
 ## Automatic metadata and artwork (v0.2)
 
 Validated on September 28–29, 2026, macOS 26.6.2, using the native ChatGPT extension and real FFmpeg. The iPhone Shortcut and its command are unchanged.

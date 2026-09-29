@@ -217,7 +217,7 @@ class PackagingTests(unittest.TestCase):
             subprocess.run(options, check=True, capture_output=True)
             command = root / "bin/share-to-music"
             result = subprocess.run([str(command), "--version"], check=True, capture_output=True, text=True)
-            self.assertIn("0.2.0", result.stdout)
+            self.assertIn("0.2.1", result.stdout)
             agent = plistlib.loads((root / "agents/com.share-to-music.worker.plist").read_bytes())
             self.assertEqual(agent["ProgramArguments"], [str(command), "worker"])
             self.assertEqual(agent["StartInterval"], 15)
