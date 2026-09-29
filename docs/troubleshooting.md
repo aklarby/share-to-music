@@ -4,7 +4,7 @@
 
 AI runs on the Mac before a new audio file is imported. Run `doctor` to check whether AI setup passed, and inspect the job log for model/artwork fallback messages. Import **Clean Music Tags** on that Mac, keep its exact name, turn **Follow Up** off, then run `"$HOME/.local/bin/share-to-music" setup-ai` to complete permissions and verify JSON output. After a model invocation fails, setup must pass again before later jobs invoke the model.
 
-The model's title and artist are used directly. A missing field uses the source tag. Artwork can fall back to the source thumbnail or be absent if retrieval/embedding fails. Completed imports and retained M4As are deliberately unchanged; sharing the same URL again does not retag an existing track. See the [metadata guide](metadata.md).
+The model's title and artist are used directly. A missing field uses the source tag. Artwork comes directly from the upload's source thumbnail and can be absent if retrieval/embedding fails; no catalog lookup is used. Completed imports and retained M4As are deliberately unchanged; sharing the same URL again does not retag an existing track. See the [metadata guide](metadata.md).
 
 ## The phone keeps spinning
 

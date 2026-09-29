@@ -1,6 +1,6 @@
 # Optional: automatic song names with a Mac model
 
-The basic workflow works without AI. Artwork lookup is automatic; this optional step adds model-generated song names. The iPhone Shortcut still submits only a URL and returns a queue confirmation. All enrichment runs on the Mac before the new M4A is imported into Music.
+The basic workflow works without AI. The upload's own artwork is embedded automatically; this optional step adds model-generated song names. The iPhone Shortcut still submits only a URL and returns a queue confirmation. All enrichment runs on the Mac before the new M4A is imported into Music.
 
 ## Enable the Mac model helper
 
@@ -48,7 +48,7 @@ These examples were run through the native ChatGPT helper with file input and ou
 
 Model responses can vary; these are observed results, not a hardcoded correction table.
 
-The worker supplies a small JSON file containing title, track, artist, uploader, album, and duration when available. It excludes URLs, descriptions, cookies, and private-track access tokens. The prompt treats all source metadata as data rather than instructions. Temporary model files are removed after the call. With ChatGPT or Apple's cloud model, this metadata is processed by the selected provider; choose On-Device if you want the model step to remain local. Catalog/image retrieval still uses the internet.
+The worker supplies a small JSON file containing title, track, artist, uploader, album, and duration when available. It excludes URLs, descriptions, cookies, and private-track access tokens. The prompt treats all source metadata as data rather than instructions. Temporary model files are removed after the call. With ChatGPT or Apple's cloud model, this metadata is processed by the selected provider; choose On-Device if you want the model step to remain local. Source artwork retrieval still uses the internet.
 
 ## Fallbacks and runtime
 
@@ -66,11 +66,13 @@ To stop model calls while keeping automatic artwork:
 
 ## Artwork and existing tracks
 
-The Mac searches Apple's iTunes catalog for the selected title and artist. It accepts only a matching title/artist and duration within 5 seconds or 3%, whichever is larger; different matching releases/artwork are treated as ambiguous. Original recording labels are retained internally so a live, unreleased, or remixed upload uses its source thumbnail instead of a studio-release catalog match. This does not put those labels back in the displayed title.
+For **SoundCloud links**, the worker downloads the upload's own artwork directly from thumbnail URLs supplied by SoundCloud through yt-dlp. For **YouTube links**, it uses the video's thumbnail. This works for unreleased songs too: there is no Apple catalog lookup or attempt to match an official release, and the model never supplies image URLs.
 
-If the catalog is unavailable or no reliable match exists, the worker tries the source thumbnail. Images must come from the Apple, SoundCloud, or YouTube image hosts, use HTTPS, and stay within download/dimension limits. A missing image never blocks import.
+Images must come from SoundCloud or YouTube image hosts, use HTTPS, and stay within download/dimension limits. If an image fails, the worker tries another source thumbnail size, up to three distinct URLs. If none succeeds, it imports the audio without new artwork.
 
-Tags are embedded during AAC conversion. Artwork is attached afterward by copying the AAC stream, without another lossy audio encode. If artwork embedding fails, the valid audio is retained and imported without new artwork. A catalog album name is used only with successfully embedded matched catalog artwork; otherwise the source album or **Shared Audio** remains.
+Tags are embedded during AAC conversion. Artwork is attached afterward by copying the AAC stream, without another lossy audio encode. If artwork embedding fails, the valid audio is retained and imported without new artwork.
+
+All new imports, including YouTube links, use the album **SoundCloud**. A shared album artist of **Various Artists** and the compilation flag keep songs together in one Music album while preserving each song's individual artist. Source album names do not override this grouping. Each file contains its own artwork; Music's grouped album view displays one cover for the album.
 
 This applies to newly converted audio. Already-retained M4As, completed jobs, and existing Music entries are preserved. Retrying a failed Music import reuses its existing audio and does not rerun the model or download. This is not a batch retagging command for your current library.
 

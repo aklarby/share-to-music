@@ -15,9 +15,9 @@ Share to Music connects an iPhone Share Sheet Shortcut to a small Python helper 
 - Accepts individual YouTube videos, Shorts, YouTube Music video links, and SoundCloud track/share links.
 - Connects the iPhone to Tailscale and uses your selected home-network exit node before SSH.
 - Runs downloads in a per-user background queue, independent of the SSH connection.
-- Writes 256 kbps AAC with title, artist/uploader, album, and an import identity tag. Source quality still limits the result.
+- Writes 256 kbps AAC with title, artist/uploader, album, and an import identity tag. All new imports join one **SoundCloud** album, retaining each song's artist. Source quality still limits the result.
 - Optionally uses a native Mac **Clean Music Tags** Shortcut to name the song and artist with ChatGPT or Apple Intelligence, without an API key.
-- Embeds matching catalog artwork or the source thumbnail; failed enrichment still permits audio import.
+- Embeds the upload's own artwork: SoundCloud artwork for SoundCloud links and the video thumbnail for YouTube links. Missing artwork still permits audio import.
 - Avoids repeated imports by normalizing URLs and checking a source marker in Music.
 - Saves progress and logs; a failed Music import can retry using the audio already downloaded.
 - Includes a signed, downloadable `.shortcut`, inspectable source, a generator, and automated tests.
@@ -120,7 +120,7 @@ On a Mac with Apple Intelligence enabled, install the separate [Clean Music Tags
 "$HOME/.local/bin/share-to-music" setup-ai
 ```
 
-Follow the [optional metadata setup guide with screenshots](docs/metadata.md) for model settings, permissions, and fallbacks. The model's title and artist are used directly, with **&** between collaborating artists and clean song names without upload/version labels. There is no confidence score. Model failures fall back to source tags; artwork lookup runs automatically even without AI. All processing happens in the Mac worker, so **your iPhone Shortcut stays unchanged**.
+Follow the [optional metadata setup guide with screenshots](docs/metadata.md) for model settings, permissions, and fallbacks. The model's title and artist are used directly, with **&** between collaborating artists and clean song names without upload/version labels. There is no confidence score. Model failures fall back to source tags; source artwork is embedded automatically even without AI. All processing happens in the Mac worker, so **your iPhone Shortcut stays unchanged**.
 
 ## Files, privacy, and maintenance
 

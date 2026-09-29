@@ -29,78 +29,86 @@ class MetadataTests(unittest.TestCase):
             self.assertEqual(metadata.clean_title(original), 'Song')
         self.assertEqual(metadata.clean_title('Live Forever'), 'Live Forever')
         self.assertEqual(metadata.versions('Delivery'), set())
-        self.assertNotEqual(metadata.normalized('東京'), metadata.normalized('大阪'))
+        self.assertEqual(metadata.clean_title('東京 (Live)'), '東京')
 
     def test_model_names_are_used_directly_without_confidence_or_source_gate(self):
         info = {'title': 'Poorly named upload (Unreleased).mp3', 'uploader': 'Fan channel'}
         self.assertEqual(metadata.choose_tags(info, {'title': 'Actual Song', 'artist': 'Actual Artist'}),
-                         {'title': 'Actual Song', 'artist': 'Actual Artist', 'album': 'Shared Audio'})
+                         {'title': 'Actual Song', 'artist': 'Actual Artist', 'album': 'SoundCloud',
+                          'album_artist': 'Various Artists', 'compilation': '1'})
         # The caller trusts model names, even when its wording differs from the source.
         self.assertEqual(metadata.choose_tags(info, {'title': 'Song (Live)', 'artist': 'Artist'})['title'], 'Song (Live)')
 
     def test_missing_model_fields_fall_back_individually(self):
-        info = {'title': 'Song.mp3', 'uploader': 'Source'}
+        info = {'title': 'Song.mp3', 'uploader': 'Source', 'album': 'Source Album'}
         for value in [None, [], 'invalid JSON', {'title': None, 'artist': None},
                       {'title': 'Bad\x00', 'artist': None}, {'title': 'a' * 301}]:
             self.assertEqual(metadata.choose_tags(info, value)['title'], 'Song')
         self.assertEqual(metadata.choose_tags(info, {'title': 'Clean', 'artist': None, 'album': 'Invented'}),
-                         {'title': 'Clean', 'artist': 'Source', 'album': 'Shared Audio'})
+                         {'title': 'Clean', 'artist': 'Source', 'album': 'SoundCloud',
+                          'album_artist': 'Various Artists', 'compilation': '1'})
 
     def test_artwork_hosts_and_redirects_are_restricted(self):
         for value in ['http://i.scdn.co/a', 'https://127.0.0.1/a', 'https://i.ytimg.com.evil.test/a',
-                      'https://user@i.ytimg.com/a', 'https://i.ytimg.com:8443/a', 'file:///etc/passwd']:
+                      'https://user@i.ytimg.com/a', 'https://i.ytimg.com:8443/a', 'file:///etc/passwd',
+                      'https://itunes.apple.com/search', 'https://a.mzstatic.com/cover.jpg']:
             with self.subTest(value=value), self.assertRaises(ValueError):
-                metadata.allowed_url(value, 'image')
+                metadata.allowed_url(value)
         with self.assertRaises(ValueError):
-            metadata.SafeRedirects('image').redirect_request(Request('https://i.ytimg.com/a'), None,
+            metadata.SafeRedirects().redirect_request(Request('https://i.ytimg.com/a'), None,
                                                              302, 'Found', {}, 'https://evil.test/a')
-        self.assertEqual(metadata.allowed_url('https://i.ytimg.com/vi/a.jpg', 'image'), 'https://i.ytimg.com/vi/a.jpg')
-
-    def test_catalog_rejects_wrong_artist_version_duration_and_ambiguity(self):
-        tags = {'title': 'Song', 'artist': 'Artist'}
-        item = {'kind': 'song', 'trackName': 'Song', 'artistName': 'Artist', 'trackTimeMillis': 200000,
-                'collectionName': 'Album', 'artworkUrl100': 'https://a.mzstatic.com/100x100bb.jpg'}
-        self.assertEqual(metadata.catalog_match(tags, 200, [item]), item)
-        for changed in [{'artistName': 'Other'}, {'trackName': 'Song (Live)'}, {'trackTimeMillis': 300000},
-                        {'trackTimeMillis': float('nan')}]:
-            self.assertIsNone(metadata.catalog_match(tags, 200, [{**item, **changed}]))
-        self.assertIsNone(metadata.catalog_match({'title': 'Song (Unreleased)', 'artist': 'Artist'}, 200, [item]))
-        for extra in [{'collectionName': 'Other Album'}, {'artworkUrl100': 'https://a.mzstatic.com/other.jpg'}]:
-            self.assertIsNone(metadata.catalog_match(tags, 200, [item, {**item, **extra}]))
-        self.assertIsNone(metadata.catalog_match(tags, float('nan'), [item]))
+        self.assertEqual(metadata.allowed_url('https://i.ytimg.com/vi/a.jpg'), 'https://i.ytimg.com/vi/a.jpg')
 
     @patch('share_to_music.metadata.fetch', side_effect=OSError('offline'))
     def test_artwork_failure_is_optional(self, fetch):
         with tempfile.TemporaryDirectory() as temp:
-            result = metadata.find_artwork({'title': 'Song', 'artist': 'Artist'},
-                {'duration': 200, 'thumbnail': 'https://i.ytimg.com/vi/a.jpg'}, Path(temp), io.StringIO(), lambda *a, **k: '')
-        self.assertEqual(result, (None, ''))
+            result = metadata.find_artwork({'duration': 200, 'thumbnail': 'https://i.ytimg.com/vi/a.jpg'},
+                Path(temp), io.StringIO(), lambda *a, **k: '')
+        self.assertIsNone(result)
 
-    def test_catalog_image_failure_falls_back_to_source(self):
-        item = {'kind': 'song', 'trackName': 'Song', 'artistName': 'Artist', 'trackTimeMillis': 200000,
-                'collectionName': 'Album', 'artworkUrl100': 'https://a.mzstatic.com/100x100bb.jpg'}
+    def test_source_thumbnail_failure_tries_another_size(self):
         def fetch(url, **kwargs):
-            if kwargs['kind'] == 'catalog':
-                return json.dumps({'results': [item]}).encode()
-            if 'mzstatic' in url:
-                raise OSError('catalog image unavailable')
+            if url.endswith('large.jpg'):
+                raise OSError('source image size unavailable')
             return b'image fixture'
         def run(args, **kwargs):
             if args[0] == 'ffprobe':
                 return json.dumps({'streams': [{'codec_type': 'video', 'width': 64, 'height': 64}]})
             Path(args[-1]).write_bytes(b'normalized jpeg')
-        with tempfile.TemporaryDirectory() as temp, patch('share_to_music.metadata.fetch', side_effect=fetch):
-            cover, album = metadata.find_artwork({'title': 'Song', 'artist': 'Artist'},
-                {'duration': 200, 'thumbnail': 'https://i.ytimg.com/a.jpg'}, Path(temp), io.StringIO(), run)
+        with tempfile.TemporaryDirectory() as temp, patch('share_to_music.metadata.fetch', side_effect=fetch) as requests:
+            cover = metadata.find_artwork({'thumbnail': 'https://i1.sndcdn.com/large.jpg',
+                'thumbnails': [{'url': 'https://i1.sndcdn.com/small.jpg'}, {'url': 'https://i1.sndcdn.com/large.jpg'}]},
+                Path(temp), io.StringIO(), run)
             self.assertTrue(cover.exists())
-            self.assertEqual(album, '')
+            self.assertEqual([call.args[0] for call in requests.call_args_list],
+                             ['https://i1.sndcdn.com/large.jpg', 'https://i1.sndcdn.com/small.jpg'])
 
-    def test_unreleased_source_never_uses_studio_catalog_even_with_clean_track_tag(self):
+    def test_missing_thumbnail_makes_no_requests(self):
         with tempfile.TemporaryDirectory() as temp, patch('share_to_music.metadata.fetch') as fetch:
-            metadata.find_artwork({'title': 'Song', 'artist': 'Artist'},
-                {'title': 'Song (Unreleased)', 'track': 'Song', 'duration': 200},
+            metadata.find_artwork({'title': 'Song', 'track': 'Song', 'artist': 'Artist', 'duration': 200},
                 Path(temp), io.StringIO(), lambda *a, **k: '')
             fetch.assert_not_called()
+
+    def test_soundcloud_artwork_is_used_directly(self):
+        def run(args, **kwargs):
+            if args[0] == 'ffprobe':
+                return json.dumps({'streams': [{'codec_type': 'video', 'width': 64, 'height': 64}]})
+            Path(args[-1]).write_bytes(b'normalized jpeg')
+        with tempfile.TemporaryDirectory() as temp, patch('share_to_music.metadata.fetch', return_value=b'source image') as fetch:
+            cover = metadata.find_artwork({'extractor_key': 'Soundcloud', 'title': 'Song', 'duration': 200,
+                 'thumbnail': 'https://i1.sndcdn.com/artwork.jpg'}, Path(temp), io.StringIO(), run)
+            self.assertTrue(cover.exists())
+            fetch.assert_called_once_with('https://i1.sndcdn.com/artwork.jpg')
+
+    def test_source_image_failures_are_bounded_without_catalog_fallback(self):
+        with tempfile.TemporaryDirectory() as temp, patch('share_to_music.metadata.fetch', side_effect=OSError('offline')) as requests:
+            log = io.StringIO()
+            cover = metadata.find_artwork({'extractor_key': 'Soundcloud', 'title': 'Song', 'duration': 200,
+                 'thumbnails': [{'url': f'https://i1.sndcdn.com/{i}.jpg'} for i in range(10)]},
+                Path(temp), log, lambda *a, **k: '')
+            self.assertIsNone(cover)
+            self.assertEqual([call.args[0] for call in requests.call_args_list],
+                             [f'https://i1.sndcdn.com/{i}.jpg' for i in (9, 8, 7)])
 
 
 class ModelTests(unittest.TestCase):

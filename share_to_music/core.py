@@ -225,6 +225,8 @@ def download_audio(root: Path, job: sqlite3.Row, info: dict, url: str, log) -> P
                  "-map", "0:a:0", "-vn", "-c:a", "aac", "-b:a", "256k", "-movflags", "+faststart",
                  "-metadata", f"title={tags['title']}", "-metadata", f"artist={tags['artist']}",
                  "-metadata", f"album={tags['album']}",
+                 "-metadata", f"album_artist={tags['album_artist']}",
+                 "-metadata", f"compilation={tags['compilation']}",
                  "-metadata", f"comment=share-to-music:{key}", str(temporary)],
                 timeout=600, log=log)
     if not temporary.exists() or not 0 < temporary.stat().st_size <= MAX_SIZE:
@@ -237,14 +239,14 @@ def download_audio(root: Path, job: sqlite3.Row, info: dict, url: str, log) -> P
         raise UserError("Converted audio has an invalid duration.")
     # Keep the valid audio until optional image retrieval AND embedding succeed.
     try:
-        cover, album = find_artwork(tags, info, staging, log, run_command)
+        cover = find_artwork(info, staging, log, run_command)
         if cover:
             decorated = staging / "with-artwork.m4a"
             run_command(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
                          "-i", str(temporary), "-i", str(cover),
                          "-map", "0:a:0", "-map", "1:v:0", "-map_metadata", "0",
                          "-c:a", "copy", "-c:v", "mjpeg", "-disposition:v", "attached_pic",
-                         "-metadata", f"album={album or tags['album']}", "-movflags", "+faststart",
+                         "-movflags", "+faststart",
                          str(decorated)], timeout=30, log=log)
             check = json.loads(run_command(["ffprobe", "-v", "error", "-show_format", "-show_streams",
                                             "-of", "json", str(decorated)], timeout=10))
