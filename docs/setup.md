@@ -15,13 +15,13 @@ Use `whoami` in Mac Terminal for **User**. For **Host**, use the Mac's home-LAN 
 
 The [SSH guide](ssh.md) walks through copying the key from the **iPhone**, preserving existing authorized keys, comparing fingerprints, checking the Mac's host identity, and safely disabling password login. A server-fingerprint prompt confirms you reached SSH; successful key authentication is a separate step.
 
-The Mac's SSH server authenticates this connection as your user. The Shortcut always runs a fixed queue command with the URL as Base64 data:
+The Mac's SSH server authenticates this connection as your user. The Shortcut sends the plain URL through the SSH action’s **Input** field and runs this fixed command:
 
 ```sh
-"$HOME/.local/bin/share-to-music" enqueue --base64 'BASE64_ENCODED_MAGIC_VARIABLE'
+"$HOME/.local/bin/share-to-music" enqueue --stdin
 ```
 
-`BASE64_ENCODED_MAGIC_VARIABLE` represents the **Base64 Encoded** variable token, not literal text to type. The downloadable Shortcut already wires it correctly.
+Set **Input** to the **Item from List** variable from First Item. Tap that variable and change **Type** to **Text**. The downloadable Shortcut already wires this correctly. Keep the URL out of the script text: sending it as input avoids shell quoting issues. The helper validates it and returns a queue confirmation; it does not wait for downloading or phone sync.
 
 ## Build the Shortcut manually
 
@@ -33,9 +33,8 @@ If downloading the signed file is inconvenient, create a Shortcut named **Share 
 | 2 | Tailscale: Use Exit Node | Select the approved exit node on the Mac's home network |
 | 3 | Get URLs from Input | Input = **Shortcut Input** explicitly, not the preceding Tailscale action's output |
 | 4 | Get Item from List | **First Item** from **URLs** |
-| 5 | Base64 Encode | **Encode** the previous item; Line Breaks = **None** |
-| 6 | Run Script Over SSH | Reachable Mac LAN/Tailscale host, short username, and phone key; command above with **Base64 Encoded** inserted between single quotes |
-| 7 | Show Result / Show Content | **Shell Script Result** from the SSH action |
+| 5 | Run Script Over SSH | Reachable Mac LAN/Tailscale host, short username, and phone key; fixed command above; **Input = Item from List**, variable **Type = Text** |
+| 6 | Show Result / Show Content | **Shell Script Result** from the SSH action |
 
 In the Shortcut's details, enable **Show in Share Sheet**, accepting URLs, text, and Safari webpages. On the device running it, allow scripting in Shortcuts' advanced settings. Set **If there’s no input → Ask For → Text** in the Receive block. The distributed Shortcut already does this: tap Run directly in Shortcuts and paste a link when prompted, or use another app’s Share Sheet as usual.
 

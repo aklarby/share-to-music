@@ -23,7 +23,7 @@ def text_token(value):
 def build():
     # Stable UUIDs keep the source reviewable and the build reproducible.
     ids = {name: str(uuid.uuid5(uuid.NAMESPACE_URL, "share-to-music/" + name)).upper()
-           for name in ("connect", "exit_node", "urls", "first", "encoded", "ssh")}
+           for name in ("connect", "exit_node", "urls", "first", "ssh")}
 
     def output(name, label):
         return token({"Type": "ActionOutput", "OutputUUID": ids[name], "OutputName": label})
@@ -49,14 +49,14 @@ def build():
     action("comment", WFCommentActionText="Setup: connect Tailscale on iPhone and select your home exit node. Enable Remote Login on the Mac. Set Host to its reachable LAN or Tailscale address and User to its short login name. Authorize the iPhone's public SSH key and install the helper. Test on cellular separately from home Wi-Fi. Tailscale stays enabled afterward. This only queues the link; it does not wait for audio conversion or phone sync.")
     action("detect.link", UUID=ids["urls"], WFInput=text_token({"Type": "ExtensionInput"}))
     action("getitemfromlist", UUID=ids["first"], WFInput=output("urls", "URLs"), WFItemSpecifier="First Item")
-    action("base64encode", UUID=ids["encoded"], WFInput=output("first", "Item from List"),
-           WFEncodeMode="Encode", WFBase64LineBreakMode="None")
-    prefix = '"$HOME/.local/bin/share-to-music" enqueue --base64 '
-    script = {"Value": {"string": prefix + "'\ufffc'", "attachmentsByRange": {
-        "{%d, 1}" % (len(prefix) + 1): {"Type": "ActionOutput", "OutputUUID": ids["encoded"], "OutputName": "Base64 Encoded"}
-    }}, "WFSerializationType": "WFTextTokenString"}
+    # Send URL text as stdin; never interpolate shared text into shell code.
+    url_input = output("first", "Item from List")
+    url_input["Value"]["Aggrandizements"] = [{
+        "Type": "WFCoercionVariableAggrandizement", "CoercionItemClass": "WFStringContentItem",
+    }]
     action("runsshscript", UUID=ids["ssh"], WFSSHHost="your-mac.your-tailnet.ts.net", WFSSHPort="22",
-           WFSSHUser="your-mac-username", WFSSHAuthenticationType="SSH Key", WFSSHScript=script)
+           WFSSHUser="your-mac-username", WFSSHAuthenticationType="SSH Key", WFInput=url_input,
+           WFSSHScript='"$HOME/.local/bin/share-to-music" enqueue --stdin\n')
     action("showresult", Text=text_token(output("ssh", "Shell Script Result")["Value"]))
     return {
         "WFWorkflowName": "Share to Music", "WFWorkflowClientVersion": "3030.0.4.2",

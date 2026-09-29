@@ -68,7 +68,7 @@ Find your short Mac username with `whoami` in Terminal. Authorize the **iPhone's
 5. In Shortcut Details, confirm **Show in Share Sheet** is enabled. The Shortcut accepts URLs, text, and Safari webpages and uses the first URL it finds.
 6. If scripting actions are disabled, turn on **Allow Running Scripts** in Shortcuts' advanced settings on the device running the Shortcut. [Apple's scripting settings guide](https://support.apple.com/guide/shortcuts/apdfeb05586f/ios)
 
-The action chain is **Tailscale Connect → Use Exit Node → Get URLs → First Item → Base64 Encode → Run Script Over SSH → Show Result**. The encoded URL is inserted as a single argument; do not replace it with the raw shared URL. The exit node remains selected afterward; turn it off in Tailscale when you no longer want it.
+The action chain is **Tailscale Connect → Use Exit Node → Get URLs → First Item → Run Script Over SSH → Show Result**. The URL goes directly into the SSH action’s **Input** field as **Text**. The fixed command is `"$HOME/.local/bin/share-to-music" enqueue --stdin`; no Base64 or URL variable belongs in the script text. The exit node remains selected afterward; turn it off in Tailscale when you no longer want it.
 
 ### Setup screenshots
 
@@ -78,7 +78,7 @@ The iPhone screenshot shows the network actions in place. Tap the unconfigured *
 
 ![Shortcut showing Tailscale connection, exit-node selection, shared input, and the enabled Share Sheet setting.](docs/images/shortcut-workflow.png)
 
-![SSH command with the Base64 variable and the Host, Port, User, and Authentication fields to configure.](docs/images/shortcut-ssh.png)
+![SSH Input uses Item from List with Type set to Text.](docs/images/shortcut-ssh.png)
 
 ## 4. Choose how music reaches your phone
 

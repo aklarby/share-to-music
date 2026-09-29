@@ -26,7 +26,17 @@ On the iPhone, inspect which action is highlighted: **Connect**, **Use Exit Node
 
 ### Test SSH without downloading
 
-Duplicate the Shortcut and name the copy **Check Share to Music**. Remove **Get URLs**, **First Item**, and **Base64 Encode**; turn off **Show in Share Sheet** for the copy. Keep the two Tailscale actions, SSH settings, and Show Result. Replace only the copy's SSH script with:
+Duplicate the Shortcut and name the copy **Check Share to Music**. Remove **Get URLs** and **First Item** (plus **Base64 Encode** if upgrading an older template); clear the SSH action’s **Input**; turn off **Show in Share Sheet** for the copy. Keep the two Tailscale actions, SSH settings, and Show Result.
+
+First replace only the copy's SSH script with this one-line connection check (press Return after it):
+
+```sh
+/usr/bin/printf 'SSH_OK\n'
+```
+
+Run the copy directly on the iPhone. Seeing `SSH_OK` confirms that the phone authenticated and executed this command. It does not yet confirm that the helper works or that a URL reached the queue. If it hangs with a `.local` Host, keep the same test command and try the Mac's numeric LAN IPv4 address from **System Settings → Network → active connection → Details → TCP/IP**, while the phone has a route to that LAN. Do not use the exit node's address as the Mac's address. [Address and routing guide](tailscale.md#choose-the-right-ssh-address)
+
+Once the minimal command works, replace it with the helper checks below. Keep the same Host, User, and SSH Key:
 
 ```sh
 /usr/bin/printf 'SSH connected as: '
@@ -35,7 +45,19 @@ Duplicate the Shortcut and name the copy **Check Share to Music**. Remove **Get 
 "$HOME/.local/bin/share-to-music" status
 ```
 
-Run the copy directly on the iPhone with no shared input. It should show the login name, helper checks, and recent queue stages. It does not download/import anything or check Music's separate Automation permission. If this test also stalls, URL extraction and media processing are not the cause. If it succeeds, retry the original through **Share → Share to Music** with a real supported URL and note any error.
+Run the copy directly on the iPhone with no shared input. It should show the login name, helper checks, and recent queue stages. It does not download/import anything or check Music's separate Automation permission. If `SSH_OK` worked but these checks stall, compare command execution and helper behavior with the connection settings unchanged; a successful minimal test alone does not validate the whole workflow. If the helper checks succeed, set the original Shortcut to the same tested Host and User. Run it directly and paste a supported link when asked, or use **Share → Share to Music**. A queue confirmation or “Already imported into Music” confirms submission; phone sync is separate.
+
+### Diagnostics work, but the main SSH action hangs
+
+In a real iPhone test, the helper/status commands succeeded while the older Base64-variable submission action stalled. Version 0.1.2 passes the plain URL through SSH **Input** as **Text** and uses only this script:
+
+```sh
+"$HOME/.local/bin/share-to-music" enqueue --stdin
+```
+
+Update the repo and run `python3 scripts/install.py` on the Mac **before** updating the Shortcut. Remove the old Base64 action and the variable from the script text. Set SSH **Input → Item from List**, then tap that variable and select **Type → Text**. Keep the tested Host, User, and SSH Key. The new flow returned a queue confirmation on the phone and completed the background Mac import in testing; the precise cause of the older action's stall was not established. Older `--base64` clients remain supported by the helper.
+
+If `--stdin` reports “unrecognized arguments,” the installed helper is still old; rerun the installer. If the action hangs with an empty Input, connect it to the First Item output as shown above.
 
 ## The Shortcut cannot connect
 

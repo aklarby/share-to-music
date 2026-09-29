@@ -148,6 +148,25 @@ class QueueTests(unittest.TestCase):
             self.assertEqual(main(["--data-dir", str(self.root), "status", "--json"]), 0)
         self.assertEqual(json.loads(stdout.getvalue())[0]["url"], URL)
 
+    def test_cli_plain_stdin_roundtrip_and_duplicate(self):
+        command = [sys.executable, "-m", "share_to_music", "--data-dir", str(self.root), "enqueue", "--stdin"]
+        first = subprocess.run(command, input=URL + "\n", text=True, capture_output=True, timeout=5)
+        self.assertEqual(first.returncode, 0, first.stderr)
+        second = subprocess.run(command, input=URL, text=True, capture_output=True, timeout=5)
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertEqual(first.stdout, second.stdout)
+        self.assertEqual(self.db.execute("SELECT count(*) FROM jobs").fetchone()[0], 1)
+        self.assertEqual(self.db.execute("SELECT url FROM jobs").fetchone()[0], URL)
+
+    def test_cli_plain_stdin_rejects_empty_oversize_and_multiple_links(self):
+        command = [sys.executable, "-m", "share_to_music", "--data-dir", str(self.root), "enqueue", "--stdin"]
+        for value in ["", " " * (core.MAX_INPUT + 1), URL + "\n" + URL, "$(touch /tmp/not-a-url)"]:
+            with self.subTest(value=value[:40]):
+                result = subprocess.run(command, input=value, text=True, capture_output=True, timeout=5)
+                self.assertEqual(result.returncode, 1, result.stdout)
+                self.assertIn("Error:", result.stderr)
+        self.assertEqual(self.db.execute("SELECT count(*) FROM jobs").fetchone()[0], 0)
+
 
 class PackagingTests(unittest.TestCase):
     def test_direct_run_requests_text_instead_of_empty_share_input(self):
@@ -169,16 +188,15 @@ class PackagingTests(unittest.TestCase):
         ssh = next(a["WFWorkflowActionParameters"] for a in actions if a["WFWorkflowActionIdentifier"].endswith("runsshscript"))
         self.assertTrue(ssh["WFSSHHost"].endswith(".ts.net"))
 
-    def test_shortcut_uses_base64_token_not_raw_url(self):
+    def test_shortcut_passes_url_as_text_stdin_without_shell_interpolation(self):
         data = build()
         actions = data["WFWorkflowActions"]
-        encoded = next(x["WFWorkflowActionParameters"] for x in actions if x["WFWorkflowActionIdentifier"].endswith("base64encode"))
+        self.assertFalse(any(x["WFWorkflowActionIdentifier"].endswith("base64encode") for x in actions))
+        first = next(x["WFWorkflowActionParameters"] for x in actions if x["WFWorkflowActionIdentifier"].endswith("getitemfromlist"))
         ssh = next(x["WFWorkflowActionParameters"] for x in actions if x["WFWorkflowActionIdentifier"].endswith("runsshscript"))
-        value = ssh["WFSSHScript"]["Value"]
-        offset = value["string"].index("\ufffc")
-        attachment = value["attachmentsByRange"]["{%d, 1}" % offset]
-        self.assertEqual(attachment["OutputUUID"], encoded["UUID"])
-        self.assertIn("--base64 '\ufffc'", value["string"])
+        self.assertEqual(ssh["WFSSHScript"], '"$HOME/.local/bin/share-to-music" enqueue --stdin\n')
+        self.assertEqual(ssh["WFInput"]["Value"]["OutputUUID"], first["UUID"])
+        self.assertEqual(ssh["WFInput"]["Value"]["Aggrandizements"][0]["CoercionItemClass"], "WFStringContentItem")
         self.assertNotIn("WFSSHPassword", ssh)
         self.assertIn("ActionExtension", data["WFWorkflowTypes"])
 
@@ -199,7 +217,7 @@ class PackagingTests(unittest.TestCase):
             subprocess.run(options, check=True, capture_output=True)
             command = root / "bin/share-to-music"
             result = subprocess.run([str(command), "--version"], check=True, capture_output=True, text=True)
-            self.assertIn("0.1.1", result.stdout)
+            self.assertIn("0.1.2", result.stdout)
             agent = plistlib.loads((root / "agents/com.share-to-music.worker.plist").read_bytes())
             self.assertEqual(agent["ProgramArguments"], [str(command), "worker"])
             self.assertEqual(agent["StartInterval"], 15)

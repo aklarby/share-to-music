@@ -87,22 +87,6 @@
       }
     },
     {
-      "WFWorkflowActionIdentifier": "is.workflow.actions.base64encode",
-      "WFWorkflowActionParameters": {
-        "UUID": "A809DB97-A64A-5269-9940-59586C0FC14D",
-        "WFInput": {
-          "Value": {
-            "Type": "ActionOutput",
-            "OutputUUID": "7B709726-7F02-55BE-82D9-F5ED44C55C58",
-            "OutputName": "Item from List"
-          },
-          "WFSerializationType": "WFTextTokenAttachment"
-        },
-        "WFEncodeMode": "Encode",
-        "WFBase64LineBreakMode": "None"
-      }
-    },
-    {
       "WFWorkflowActionIdentifier": "is.workflow.actions.runsshscript",
       "WFWorkflowActionParameters": {
         "UUID": "C11FC99B-D0C5-579B-88B7-0C2AF4959F77",
@@ -110,19 +94,21 @@
         "WFSSHPort": "22",
         "WFSSHUser": "your-mac-username",
         "WFSSHAuthenticationType": "SSH Key",
-        "WFSSHScript": {
+        "WFInput": {
           "Value": {
-            "string": "\"$HOME/.local/bin/share-to-music\" enqueue --base64 '\ufffc'",
-            "attachmentsByRange": {
-              "{52, 1}": {
-                "Type": "ActionOutput",
-                "OutputUUID": "A809DB97-A64A-5269-9940-59586C0FC14D",
-                "OutputName": "Base64 Encoded"
+            "Type": "ActionOutput",
+            "OutputUUID": "7B709726-7F02-55BE-82D9-F5ED44C55C58",
+            "OutputName": "Item from List",
+            "Aggrandizements": [
+              {
+                "Type": "WFCoercionVariableAggrandizement",
+                "CoercionItemClass": "WFStringContentItem"
               }
-            }
+            ]
           },
-          "WFSerializationType": "WFTextTokenString"
-        }
+          "WFSerializationType": "WFTextTokenAttachment"
+        },
+        "WFSSHScript": "\"$HOME/.local/bin/share-to-music\" enqueue --stdin\n"
       }
     },
     {

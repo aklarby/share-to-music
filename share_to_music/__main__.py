@@ -10,7 +10,7 @@ import subprocess
 import sys
 
 from . import __version__
-from .core import DATA_DIR, UserError, connect, decode_url, enqueue, process_queue, retry
+from .core import DATA_DIR, MAX_INPUT, UserError, connect, decode_url, enqueue, process_queue, retry
 
 
 def main(argv=None) -> int:
@@ -22,7 +22,8 @@ def main(argv=None) -> int:
     add = sub.add_parser("enqueue", help="Queue one URL; returns immediately")
     source = add.add_mutually_exclusive_group(required=True)
     source.add_argument("url", nargs="?")
-    source.add_argument("--base64", dest="encoded", help="Base64 encoded URL from Shortcuts")
+    source.add_argument("--base64", dest="encoded", help="Base64 encoded URL (older Shortcuts)")
+    source.add_argument("--stdin", action="store_true", help="Read one plain URL from SSH Input or a pipe")
     status = sub.add_parser("status", help="Show recent jobs or one job")
     status.add_argument("job_id", nargs="?")
     status.add_argument("--json", action="store_true")
@@ -56,7 +57,15 @@ def main(argv=None) -> int:
             return process_queue(args.data_dir)
         with contextlib.closing(connect(args.data_dir)) as db:
             if args.command == "enqueue":
-                job = enqueue(db, decode_url(args.encoded) if args.encoded is not None else args.url)
+                if args.stdin:
+                    if sys.stdin.isatty():
+                        raise UserError("Pass the URL through the Shortcut's SSH Input field or a pipe.")
+                    url = sys.stdin.read(MAX_INPUT + 1)
+                    if len(url) > MAX_INPUT:
+                        raise UserError("Shared input is too large.")
+                else:
+                    url = decode_url(args.encoded) if args.encoded is not None else args.url
+                job = enqueue(db, url)
                 if job["state"] == "failed":
                     print(f"Failed earlier: {job['id']}. Run share-to-music retry {job['id']} after checking status.")
                     return 1
