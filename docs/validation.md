@@ -4,7 +4,7 @@ Initial validation: September 28, 2026, macOS 26.5.1, Python 3.14.7, yt-dlp 2026
 
 | Check | Result |
 | --- | --- |
-| Unit/integration suite | 19 tests passed locally |
+| Unit/integration suite | 20 tests passed locally |
 | Audio conversion | Generated a one-second test tone, converted it with real FFmpeg, verified AAC and metadata with ffprobe |
 | URL and argument safety | Tested host allowlisting, bad schemes/ports, collection URLs, hostile input, Base64, and redirect restrictions |
 | Queue and recovery | Tested duplicate shares, failed downloads, import retries without redownloading, interrupted-job recovery, and concurrent-worker exclusion |
@@ -15,13 +15,17 @@ Initial validation: September 28, 2026, macOS 26.5.1, Python 3.14.7, yt-dlp 2026
 | Shortcut signing | Apple's `shortcuts sign --mode anyone` produced the distributable |
 | Shortcut import | Imported into macOS Shortcuts; checked shared-input, first-item, Base64, SSH command/authentication placeholders, output variable, and Share Sheet setting in the native editor |
 | Tailscale action definitions | Read from an export of the user's native iPhone Connect/Use Exit Node actions; app intent IDs and metadata are included in the generator |
+| SoundCloud local end-to-end test | User-provided short link resolved, downloaded, converted, and imported into the real Music library through the installed background worker; completed with a persistent Music ID |
+| Music import recovery | Reproduced a library-query timeout and a post-import metadata write error; fixed indexed duplicate lookup and removed redundant comment write in v0.1.1; retry confirmed the existing track, with one matching library entry |
+| Direct Shortcut launch | Native no-input behavior set to Ask For → Text and copied from an exported workflow into the template; Share Sheet input remains supported |
+| Key-only SSH documentation | Configuration syntax/effective options verified with a temporary SSH configuration and temporary host key; system settings were not changed |
 | Documentation screenshots | Captured from the macOS Shortcut, plus a real iPhone screenshot supplied by the user |
 
 An older yt-dlp test video (`BaW_jenozKc`) was unavailable during the network smoke check; it remains a syntactically valid offline fixture in the automated tests.
 
 ## Checks that still need a configured device pair
 
-The initial release has **not** been verified through a real iPhone → Tailscale/exit node → SSH → background Music import → iPhone cloud-sync round trip. Automated Music import calls are mocked. Real media downloading, VPN connection and exit-node selection, a live SSH connection, and background Automation permission also need device-level validation.
+The initial release has **not** been verified through a real iPhone → Tailscale/exit node → SSH → background Music import → iPhone cloud-sync round trip. Automated Music import calls are mocked. Real SoundCloud downloading, conversion, and background Music import have now been validated locally. Phone VPN actions, the full iPhone SSH submission path, and phone sync still need their own validation. YouTube audio downloading has not been tested end to end.
 
 Before relying on the workflow, follow the [first-run check](setup.md#first-run-check) with a short recording you own. Confirm the Mac's import independently from the phone's sync. This is especially important because macOS Automation approval is tied to the process launching the Music request.
 

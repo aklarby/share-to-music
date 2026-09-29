@@ -21,6 +21,18 @@
 	<array>
 		<string>ActionExtension</string>
 	</array>
+	<key>WFWorkflowNoInputBehavior</key>
+	<dict>
+		<key>Name</key>
+		<string>WFWorkflowNoInputBehaviorAskForInput</string>
+		<key>Parameters</key>
+		<dict>
+			<key>ItemClass</key>
+			<string>WFStringContentItem</string>
+		</dict>
+	</dict>
+	<key>WFWorkflowHasShortcutInputVariables</key>
+	<true/>
 	<key>WFWorkflowInputContentItemClasses</key>
 	<array>
 		<string>WFURLContentItem</string>

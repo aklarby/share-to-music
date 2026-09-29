@@ -10,6 +10,13 @@
   "WFWorkflowTypes": [
     "ActionExtension"
   ],
+  "WFWorkflowNoInputBehavior": {
+    "Name": "WFWorkflowNoInputBehaviorAskForInput",
+    "Parameters": {
+      "ItemClass": "WFStringContentItem"
+    }
+  },
+  "WFWorkflowHasShortcutInputVariables": true,
   "WFWorkflowInputContentItemClasses": [
     "WFURLContentItem",
     "WFStringContentItem",

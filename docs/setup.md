@@ -37,7 +37,7 @@ If downloading the signed file is inconvenient, create a Shortcut named **Share 
 | 6 | Run Script Over SSH | Reachable Mac LAN/Tailscale host, short username, and phone key; command above with **Base64 Encoded** inserted between single quotes |
 | 7 | Show Result / Show Content | **Shell Script Result** from the SSH action |
 
-In the Shortcut's details, enable **Show in Share Sheet**, accepting URLs, text, and Safari webpages. On the device running it, allow scripting in Shortcuts' advanced settings. Tapping Run in the editor supplies no track by itself. If running from the app without shared input, supply a URL first; the normal workflow starts from another app's Share Sheet.
+In the Shortcut's details, enable **Show in Share Sheet**, accepting URLs, text, and Safari webpages. On the device running it, allow scripting in Shortcuts' advanced settings. Set **If there’s no input → Ask For → Text** in the Receive block. The distributed Shortcut already does this: tap Run directly in Shortcuts and paste a link when prompted, or use another app’s Share Sheet as usual.
 
 ## First-run check
 

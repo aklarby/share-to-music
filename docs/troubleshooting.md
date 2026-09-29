@@ -70,6 +70,12 @@ The helper intentionally ignores personal yt-dlp configs/plugins and does not ex
 
 Tracks need a known duration no longer than two hours. Downloads have a 250 MB advertised-size limit; converted output must be at most 190 MB. Failed partial downloads may remain in `staging/`. Remove only the failed job's staging directory if you want to discard partial data, then retry.
 
+## Music import timed out (-1712) or returned file permission error (-54)
+
+Version 0.1.0 scanned all library track comments for duplicates and rewrote the comment after importing. In a live test, the first query timed out; a later attempt added the track but the redundant write failed. Version 0.1.1 uses Music's indexed search, confirms an exact marker match, and keeps the comment already embedded in the M4A.
+
+Update the repo and rerun `python3 scripts/install.py`, then `retry JOB_ID`. The retry reuses the audio and checks for an existing import. If the error persists on the current version, inspect Music for dialogs and use `status JOB_ID`; a timeout by itself does not prove that Automation permission was denied.
+
 ## Music import / Automation error (-1743)
 
 Open Music on the Mac first. Check **System Settings → Privacy & Security → Automation** for the process macOS identifies as requesting Music control, and approve it if you trust this installation. Keep the desktop unlocked during initial setup so you can see permission dialogs.

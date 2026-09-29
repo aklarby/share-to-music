@@ -88,7 +88,7 @@ The iPhone screenshot shows the network actions in place. Tap the unconfigured *
 
 ## 5. Share a track
 
-In YouTube or SoundCloud, tap **Share → More → Share to Music**. The Shortcut displays a job ID and a queue confirmation. After processing, find the title in the Mac's Music library, then wait for your chosen sync method.
+In YouTube or SoundCloud, tap **Share → More → Share to Music**. You can also run it directly in Shortcuts and paste the link into the text prompt. The Shortcut displays a job ID and a queue confirmation. After processing, find the title in the Mac's Music library, then wait for your chosen sync method.
 
 Check progress on the Mac:
 

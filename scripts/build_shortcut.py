@@ -63,6 +63,9 @@ def build():
         "WFWorkflowMinimumClientVersion": 900, "WFWorkflowMinimumClientVersionString": "900",
         "WFWorkflowIcon": {"WFWorkflowIconStartColor": 4282601983, "WFWorkflowIconGlyphNumber": 59511},
         "WFWorkflowTypes": ["ActionExtension"],
+        "WFWorkflowNoInputBehavior": {"Name": "WFWorkflowNoInputBehaviorAskForInput",
+                                      "Parameters": {"ItemClass": "WFStringContentItem"}},
+        "WFWorkflowHasShortcutInputVariables": True,
         "WFWorkflowInputContentItemClasses": ["WFURLContentItem", "WFStringContentItem", "WFSafariWebPageContentItem"],
         "WFWorkflowActions": actions, "WFWorkflowImportQuestions": [],
     }

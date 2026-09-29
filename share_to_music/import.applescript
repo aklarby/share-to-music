@@ -6,10 +6,14 @@ on run argv
         with timeout of 150 seconds
             -- The marker is embedded in the M4A before import. It survives copying
             -- into Music's media folder and makes a retry after interruption safe.
-            set matches to (every file track of library playlist 1 whose comment is marker)
-            if (count of matches) > 0 then
-                return persistent ID of item 1 of matches
-            end if
+            -- Music's indexed search avoids reading comments for every library
+            -- track. Verify the exact marker because search can return partial hits.
+            set matches to search library playlist 1 for marker only all
+            repeat with candidate in matches
+                if comment of candidate is marker then
+                    return persistent ID of candidate
+                end if
+            end repeat
             set addedTracks to add {audioFile}
             if class of addedTracks is list then
                 if (count of addedTracks) = 0 then error "Music did not add the audio file."
@@ -17,7 +21,8 @@ on run argv
             else
                 set addedTrack to addedTracks
             end if
-            set comment of addedTrack to marker
+            -- The comment was embedded by FFmpeg. Rewriting it after add can
+            -- fail with -54 while Music copies/uploads the new track.
             return persistent ID of addedTrack
         end timeout
     end tell

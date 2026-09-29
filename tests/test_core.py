@@ -150,6 +150,14 @@ class QueueTests(unittest.TestCase):
 
 
 class PackagingTests(unittest.TestCase):
+    def test_direct_run_requests_text_instead_of_empty_share_input(self):
+        data = build()
+        self.assertEqual(data["WFWorkflowNoInputBehavior"], {
+            "Name": "WFWorkflowNoInputBehaviorAskForInput",
+            "Parameters": {"ItemClass": "WFStringContentItem"},
+        })
+        self.assertTrue(data["WFWorkflowHasShortcutInputVariables"])
+
     def test_tailscale_connect_and_exit_node_precede_ssh(self):
         actions = build()["WFWorkflowActions"]
         self.assertEqual([a["WFWorkflowActionIdentifier"] for a in actions[:2]],
@@ -191,7 +199,7 @@ class PackagingTests(unittest.TestCase):
             subprocess.run(options, check=True, capture_output=True)
             command = root / "bin/share-to-music"
             result = subprocess.run([str(command), "--version"], check=True, capture_output=True, text=True)
-            self.assertIn("0.1.0", result.stdout)
+            self.assertIn("0.1.1", result.stdout)
             agent = plistlib.loads((root / "agents/com.share-to-music.worker.plist").read_bytes())
             self.assertEqual(agent["ProgramArguments"], [str(command), "worker"])
             self.assertEqual(agent["StartInterval"], 15)
